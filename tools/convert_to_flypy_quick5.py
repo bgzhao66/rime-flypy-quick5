@@ -255,8 +255,8 @@ kPinyinPhrases = purge_inconsistent_phrases(get_pinyin_phrases(), strict=False)
 
 # Step 4: Get frequency-sorted Chinese dictionary
 
-PINYIN_DICT = "pinyin_trad.dict.txt"
-PINYIN_EXT1_DICT = "pinyin_trad_ext1.dict.txt"
+PINYIN_DICT = "pinyin_simp.dict.txt"
+PINYIN_EXT1_DICT = "pinyin_simp_ext1.dict.txt"
 
 # get the frequency of words from a file
 def get_frequency_from_files(files):

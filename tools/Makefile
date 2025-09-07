@@ -1,6 +1,6 @@
 export PYTHONHASHSEED=0
 
-PRIMARY_NAME = flypy_quick5s
+PRIMARY_NAME = flypy_quick5_simp
 INDEXES = $(shell echo A B)
 # Loop over the indexes and generate the table names
 # The table names are the primary table name with the index appended

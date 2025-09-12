@@ -1,7 +1,7 @@
 export PYTHONHASHSEED=0
 
 PRIMARY_NAME = flypy_quick5
-INDEXES = $(shell echo A B)
+INDEXES = $(shell echo A )
 # Loop over the indexes and generate the table names
 # The table names are the primary table name with the index appended
 INPUT_TABLES = $(foreach index,$(INDEXES),$(PRIMARY_NAME)_ext$(index))
@@ -25,7 +25,7 @@ abbrev_table:
 extra_tables:
 	for table in $(shell echo $(INDEXES)); do \
 		echo "Converting to table $(PRIMARY_NAME)_ext$${table}"; \
-		python3 ./convert_to_flypy_quick5.py words_$${table}.txt --difference --name $(PRIMARY_NAME)_ext$${table}  > ../$(PRIMARY_NAME)_ext$${table}.dict.yaml; \
+		python3 ./convert_to_flypy_quick5.py words.txt --difference --name $(PRIMARY_NAME)_ext$${table}  > ../$(PRIMARY_NAME)_ext$${table}.dict.yaml; \
 	done
 
 .PHONY: clean

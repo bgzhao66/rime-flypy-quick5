@@ -305,9 +305,9 @@ kTonelessPinyinPhrases = get_toneless_pinyin_phrases()
 # get the frequency of a character from freq_dict with default value 0.
 def get_freq_of_word(word, toneless_code, freq_dict):
     if word not in freq_dict:
-        return (0, -sys.maxsize)
+        return (0, -sys.maxsize + 1)
     if toneless_code not in freq_dict[word]:
-        return (0, -sys.maxsize)
+        return (0, -sys.maxsize + 1)
     return freq_dict[word][toneless_code]
 
 # Step 5: Get Cangjie codes from file
@@ -515,9 +515,9 @@ encoder:
     - '^[a-z].?$'
   rules:
     - length_equal: 2
-      formula: "AaAbBaBbBcAz"
+      formula: "AaAbBaBbBcAd"
     - length_equal: 3
-      formula: "AaAbBaBbCaCbCcAz"
+      formula: "AaAbBaBbCaCbCcAd"
     - length_equal: 4
       formula: "AaAbBaBbCaCbDaDb"
     - length_equal: 5
@@ -555,6 +555,20 @@ def convert_to_nested_dict(word_codes):
         for code in word_codes[word]:
             nested_dict[word].append([code])
     return nested_dict
+
+# Get the list of word tuple (freq, code, word) from a nested dictionary of length, code, word and frequency
+# sorted_dict: a nested dictionary of length, code, word and
+# word_codes: a nested dictionary of length, code, word and frequency
+# return a list of word tuple (freq, code, word) in descending order of frequency
+def get_sorted_word_tuples(sorted_dict):
+    word_tuples = []
+    for length in sorted_dict:
+        for code in sorted_dict[length]:
+            for word in sorted_dict[length][code]:
+                freq = sorted_dict[length][code][word]
+                word_tuples.append((freq, code, word))
+    word_tuples.sort(reverse=True)
+    return word_tuples
 
 # print the word_codes which is a dictionary of key,list into a file with the format of word code frequency
 # word_codes: a dictionary of word and a list of tonal pinyin code sequences,
@@ -601,45 +615,49 @@ def get_sorted_flypyquick5_dict(words):
 # which are not most frequent ones.
 # word_codes: a nested dictionary of length, code, word and frequency
 def augment_common_words(word_codes, primary_dict = dict()):
-    for length in [2, 3, 4]:
+    for length in [1, 2, 3]:
         if length not in word_codes:
             continue
-        builtin_dict = dict()
-        if length in primary_dict:
-            builtin_dict = primary_dict[length]
+        builtin_dict = primary_dict.get(length, dict())
 
         words_to_remove = dict()
         for code in list(word_codes[length].keys()):
-            # find the most frequent word
+            assert len(word_codes[length][code]) > 0, f"Empty code entry for code {code} in length {length}"
+            # find the most frequent word by sorting the word tuples
+            word_tuples = get_sorted_word_tuples({length: {code: word_codes[length][code]}})
             max_freq = (0, -sys.maxsize)
             max_word = None
             not_in_builtin = code not in builtin_dict
             if not_in_builtin:
-                if len(word_codes[length][code]) <= 1:
-                    continue
-                for word in word_codes[length][code]:
-                    freq = word_codes[length][code][word]
+                for freq, code, word in word_tuples:
                     if freq > max_freq:
                         max_freq = freq
                         max_word = word
+            assert max_word is not None or not_in_builtin == False, f"max_word is None for code {code} in length {length}"
+
             # augment other words
-            for word in word_codes[length][code]:
+            i = 0
+            for freq, code, word in word_tuples:
                 if word == max_word:
                     continue
-                mode = 'first' if length in [2, 3] else 'last';
                 try:
-                    suffixes = get_initial_or_finals_cangjie5(word, mode)
-                    for aug_suffix in suffixes:
+                    j = 0
+                    while j < 26:
+                        aug_suffix = chr(ord('a') + (i + j) % 26)  # 'a', 'b', 'c', ...
                         new_code = code + aug_suffix
-                        freq = word_codes[length][code][word]
-                        if new_code not in word_codes[length]:
-                            word_codes[length][new_code] = dict()
-                        if word not in word_codes[length][new_code]:
-                            word_codes[length][new_code][word] = (0, 0)
-                        f, p = word_codes[length][new_code][word]
-                        word_codes[length][new_code][word] = (max(f, freq[0]), freq[1] if p == 0 else p)
+                        if not ((new_code in word_codes[length]) or (new_code in builtin_dict)):
+                            i += j
+                            break
+                        j += 1
+                    if new_code not in word_codes[length]:
+                        word_codes[length][new_code] = dict()
+                    if word not in word_codes[length][new_code]:
+                        word_codes[length][new_code][word] = (0, 0)
+                    f, p = word_codes[length][new_code][word]
+                    word_codes[length][new_code][word] = (max(f, freq[0]), freq[1] if p == 0 else p)
                 except ValueError as e:
                     print(f"Warning: {e}", file=sys.stderr)
+                i += 1
             # remove the old code entry except the most frequent one
             words_to_remove[code] = [word for word in word_codes[length][code] if word != max_word]
 
@@ -656,23 +674,10 @@ def augment_common_words(word_codes, primary_dict = dict()):
 # outfile: the output file, default is sys.stdout
 def process_and_print_flypyquick5_dict(words, outfile=sys.stdout, primary_dict = dict()):
     sorted_dict = get_sorted_flypyquick5_dict(words)
-#    augmented_dict = augment_common_words(sorted_dict, primary_dict)
-    print_word_codes(sorted_dict, outfile)
+    augmented_dict = augment_common_words(sorted_dict, primary_dict)
+    print_word_codes(augmented_dict, outfile)
 
 # Step 8: Simplified codes for codes of most frequent words
-
-# Get the list of word tuple (freq, code, word) from a nested dictionary of length, code, word and frequency
-# word_codes: a nested dictionary of length, code, word and frequency
-# return a list of word tuple (freq, code, word) in descending order of frequency
-def get_sorted_word_tuples(sorted_dict):
-    word_tuples = []
-    for length in sorted_dict:
-        for code in sorted_dict[length]:
-            for word in sorted_dict[length][code]:
-                freq = sorted_dict[length][code][word]
-                word_tuples.append((freq, code, word))
-    word_tuples.sort(reverse=True)
-    return word_tuples
 
 # Get abbreviated codes for the most frequent words
 # code_size: the size of the abbreviated code, which is obtained by truncating the FlypyQuick5 code
@@ -859,22 +864,56 @@ class TestShuangpin(unittest.TestCase):
         self.assertEqual(sorted_dict[2]["uijcd"]["世界"], (200, -1))
         self.assertEqual(sorted_dict[2]["zajd"]["再见"], (150, -1))
 
-    # Obsolete test
     def test_augment_common_words(self):
         word_codes = {
             2: {
                 "nihcd": {"你好": (100, -1), "你号": (50, -2)},
                 "uijpl": {"世界": (200, -1)},
+                "juch": {"颶": (100, -1), "犋": (50, -2)},
             }
         }
         augmented_dict = augment_common_words(word_codes)
         self.assertTrue("nihcd" in augmented_dict[2])
         self.assertTrue("uijpl" in augmented_dict[2])
-        self.assertTrue("nihcdo" in augmented_dict[2])
+        self.assertTrue("nihcda" in augmented_dict[2])
+        self.assertTrue("juch" in augmented_dict[2])
+        self.assertTrue("jucha" in augmented_dict[2])
         self.assertEqual(augmented_dict[2]["nihcd"]["你好"], (100, -1))
-        self.assertEqual(augmented_dict[2]["nihcdo"]["你号"], (50, -2))
+        self.assertEqual(augmented_dict[2]["nihcda"]["你号"], (50, -2))
         self.assertEqual(augmented_dict[2]["uijpl"]["世界"], (200, -1))
+        self.assertEqual(augmented_dict[2]["juch"]["颶"], (100, -1))
+        self.assertEqual(augmented_dict[2]["jucha"]["犋"], (50, -2))
         self.assertFalse("nihcd" in augmented_dict[2] and "你号" in augmented_dict[2]["nihcd"])
+        self.assertFalse("juch" in augmented_dict[2] and "犋" in augmented_dict[2]["juch"])
+
+    def test_augment_common_words_with_primary(self):
+        primary_dict = {
+            2: {
+                "nihcd": {"你好": (100, -1)},
+                "uijcd": {"世界": (200, -1)},
+            }
+        }
+        word_codes = {
+            2: {
+                "nihcd": {"你好": (100, -1), "你号": (50, -2)},
+                "uijpl": {"世界": (200, -1)},
+                "juch": {"颶": (100, -1), "犋": (50, -2)},
+            }
+        }
+        augmented_dict = augment_common_words(word_codes, primary_dict)
+        self.assertFalse("nihcd" in augmented_dict[2])
+        self.assertTrue("uijpl" in augmented_dict[2])
+        self.assertTrue("nihcda" in augmented_dict[2])
+        self.assertTrue("nihcdb" in augmented_dict[2])
+        self.assertTrue("juch" in augmented_dict[2])
+        self.assertTrue("jucha" in augmented_dict[2])
+        self.assertEqual(augmented_dict[2]["nihcda"]["你好"], (100, -1))
+        self.assertEqual(augmented_dict[2]["nihcdb"]["你号"], (50, -2))
+        self.assertEqual(augmented_dict[2]["uijpl"]["世界"], (200, -1))
+        self.assertEqual(augmented_dict[2]["juch"]["颶"], (100, -1))
+        self.assertEqual(augmented_dict[2]["jucha"]["犋"], (50, -2))
+        self.assertFalse("nihcd" in augmented_dict[2] and "你号" in augmented_dict[2]["nihcd"])
+        self.assertFalse("juch" in augmented_dict[2] and "犋" in augmented_dict[2]["juch"])
 
     def test_process_and_print_flypyquick5_dict(self):
         words = {
@@ -941,7 +980,7 @@ def main():
         print(get_header(args.name, input_tables))
         process_and_print_flypyquick5_dict(kTonelessPinyinPhrases, sys.stdout)
     elif args.input_file:
-        primary_dict = get_sorted_flypyquick5_dict(kTonelessPinyinPhrases)
+        primary_dict = augment_common_words(get_sorted_flypyquick5_dict(kTonelessPinyinPhrases), dict())
         # Convert Pinyin from input file to Shuangpin (Xiaohe scheme)
         print(get_header(args.name, input_tables))
         words = get_words_from_file(args.input_file)

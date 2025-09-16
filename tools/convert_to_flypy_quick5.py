@@ -595,12 +595,12 @@ def sort_by_length_and_code(word_codes):
 # word_codes: {"legth": {"code": {"word": frequency}}}
 # outfile: the output file, default is sys.stdout, in the following format:
 # word<tab>code<tab>frequency
-def print_word_codes(word_codes, outfile=sys.stdout):
+def print_word_codes(word_codes, outfile=sys.stdout, freq_base=0):
     for length in get_sorted_keys(word_codes):
         for code in get_sorted_keys(word_codes[length]):
             for word in get_sorted_keys(word_codes[length][code]):
                 freq = word_codes[length][code][word]
-                print("%s\t%s\t%i" % (word, code, freq[0]), file=outfile)
+                print("%s\t%s\t%i" % (word, code, freq[0]+freq_base), file=outfile)
 
 # Get the sorted FlypyQuick5 dictionary from a list of words.
 # words: a dictionary of words, {"word": [["py1", "py2"], ["py3", "py4"]]}
@@ -642,11 +642,11 @@ def augment_common_words(word_codes, builtin_codes = set()):
                 try:
                     j = 0
                     while j < 26:
-                        aug_suffix = chr(ord('a') + (i + j) % 26)  # 'a', 'b', 'c', ...
+                        aug_suffix = chr(ord('a') + i % 26)  # 'a', 'b', 'c', ...
                         new_code = code + aug_suffix
                         if not ((new_code in word_codes[length]) or (new_code in builtin_codes)):
-                            i += j
                             break
+                        i += 1
                         j += 1
                     if new_code not in word_codes[length]:
                         word_codes[length][new_code] = dict()
@@ -671,10 +671,10 @@ def augment_common_words(word_codes, builtin_codes = set()):
 # process a list of words and print the FlypyQuick5 dictionary to a file
 # words: a list of words
 # outfile: the output file, default is sys.stdout
-def process_and_print_flypyquick5_dict(words, outfile=sys.stdout, primary_set = set()):
+def process_and_print_flypyquick5_dict(words, outfile=sys.stdout, primary_set = set(), freq_base=0):
     sorted_dict = get_sorted_flypyquick5_dict(words)
     augmented_dict = augment_common_words(sorted_dict, primary_set)
-    print_word_codes(augmented_dict, outfile)
+    print_word_codes(augmented_dict, outfile, freq_base)
 
 # Step 8: Simplified codes for codes of most frequent words
 
@@ -985,7 +985,7 @@ def main():
         # Print Chinese character codes
         print(get_header(args.name, input_tables))
         character_dict = convert_to_nested_dict(kCharacterCodes)
-        process_and_print_flypyquick5_dict(character_dict, sys.stdout, abbreviated_codes)
+        process_and_print_flypyquick5_dict(character_dict, sys.stdout, abbreviated_codes, freq_base=10000)
     elif args.pinyin_phrase:
         # Print Pinyin phrases
         print(get_header(args.name, input_tables))

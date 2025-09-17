@@ -188,6 +188,7 @@ function plot_word_count_per_code(df::DataFrame, input_filename::String)
 	#legend!(:topright)
 	# Save the plot
 	savefig(input_filename * "_word_count_per_code.png")
+	return avg_word_count
 end
 
 # Compute the average Shannon length and key length with frequency considered and print them
@@ -222,7 +223,8 @@ function main()
 	input_file = args["input_file"]
 	df = process_file(input_file)
 	# Plot word count per code
-	plot_word_count_per_code(df, input_file)
+	avg_dup = plot_word_count_per_code(df, input_file)
+	println("Average Duplicate Count Per Code: $avg_dup")
 	# Group and calculate Shannon lengths
 	grouped_df = group_and_calculate(df)
 	compute_averages(grouped_df)

@@ -711,11 +711,10 @@ def get_abbreviated_dict_for(toneless_phrases):
             used_codes.add(code)
 
     characters = get_sorted_flypyquick5_dict(convert_to_nested_dict(kCharacterCodes))
-    tonal_phrases = get_sorted_flypyquick5_dict(kPinyinPhrases)
 
     # the list of phrase levels to process, each item is a tuple of (phrases_dict, code_sizes)
     phrase_levels = [(characters, [1, 2]), # single characters, 1 and 2-letter codes
-                     ({1: characters[1], 2: tonal_phrases[2]}, [3]), # two-character phrases, 3-letter codes
+                     ({1: characters[1], 2: toneless_phrases[2]}, [3]), # two-character phrases, 3-letter codes
                      ({1: characters[1], 2: toneless_phrases[2]}, [4]), # two-character phrases, 4-letter codes
                      ({2: toneless_phrases[2]}, [5]), # two-character phrases, 5-letter codes
                      ({3: toneless_phrases[3]}, [5]), # three-character phrases, 5-letter codes

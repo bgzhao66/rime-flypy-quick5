@@ -512,7 +512,7 @@ max_phrase_length: 10
 min_phrase_weight: 100
 encoder:
   exclude_patterns:
-    - '^[a-z].?$'
+    - '^[a-z]{1,3}$'
   rules:
     - length_equal: 2
       formula: "AaAbBaBbBcAd"

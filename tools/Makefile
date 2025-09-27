@@ -7,14 +7,14 @@ INDEXES = $(shell echo A )
 INPUT_TABLES = $(foreach index,$(INDEXES),$(PRIMARY_NAME)_ext$(index))
 
 .SILENT:
-all: primary_table predef_table abbrev_table extra_tables
+all: char_table phrase_table abbrev_table extra_tables
 	echo "All tables converted"
 
-primary_table:
+char_table:
 	echo "Converting to table $(PRIMARY_NAME)"
 	python3 ./convert_to_flypy_quick5.py --chinese_code --name $(PRIMARY_NAME) --input_tables $(PRIMARY_NAME)_abbrev $(PRIMARY_NAME)_ext $(INPUT_TABLES) > ../$(PRIMARY_NAME).dict.yaml
 
-predef_table:
+phrase_table:
 	echo "Converting to table $(PRIMARY_NAME)_ext"
 	python3 ./convert_to_flypy_quick5.py --name $(PRIMARY_NAME)_ext --pinyin_phrase > ../$(PRIMARY_NAME)_ext.dict.yaml
 

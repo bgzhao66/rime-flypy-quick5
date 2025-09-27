@@ -629,7 +629,7 @@ def augment_common_words(word_codes, builtin_codes = dict()):
             not_in_builtin = code not in builtin_codes
             if not_in_builtin:
                 for freq, code, word in word_tuples:
-                    if freq > max_freq:
+                    if (freq > max_freq) and (len(word_tuples) == 1 or (code[:-1] not in builtin_codes or word != builtin_codes[code[:-1]])):
                         max_freq = freq
                         max_word = word
             assert max_word is not None or not_in_builtin == False, f"max_word is None for code {code} in length {length}"
@@ -970,7 +970,7 @@ def main():
 
     input_tables = args.input_tables
 
-    if any([args.chinese_code, args.input_file, args.abbreviate]):
+    if any([args.chinese_code, args.pinyin_phrase, args.input_file, args.abbreviate]):
         toneless_phrases = get_sorted_flypyquick5_dict(kTonelessPinyinPhrases)
         # Get the abbreviated codes for the most frequent words
         abbreviated_dicts = get_abbreviated_dict_for(toneless_phrases)
@@ -990,7 +990,7 @@ def main():
     elif args.pinyin_phrase:
         # Print Pinyin phrases
         print(get_header(args.name, input_tables))
-        process_and_print_flypyquick5_dict(kTonelessPinyinPhrases, sys.stdout)
+        process_and_print_flypyquick5_dict(kTonelessPinyinPhrases, sys.stdout, abbreviated_codes)
     elif args.input_file:
         primary_dict = augment_common_words(toneless_phrases, abbreviated_codes)
         primary_set = dict()

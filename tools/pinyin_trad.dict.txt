@@ -1409,7 +1409,6 @@
 懣	men	1
 璊	men	1
 捫	men	1
-殙	men	1
 燜	men	1
 鍆	men	2
 菛	men	2

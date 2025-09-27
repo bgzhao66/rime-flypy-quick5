@@ -13353,7 +13353,7 @@ U+6B95: fǒu,yè,bó  # 殕
 U+6B96: zhí,shi,shì  # 殖
 U+6B97: yè,yàn,yān  # 殗
 U+6B98: cán  # 殘
-U+6B99: hūn,mèn  # 殙
+U+6B99: hūn,mèi  # 殙
 U+6B9A: dān  # 殚
 U+6B9B: jí  # 殛
 U+6B9C: dié  # 殜

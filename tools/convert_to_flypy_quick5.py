@@ -614,7 +614,7 @@ def get_sorted_flypyquick5_dict(words):
 # Augment the common words when there are conflicts by appending the first character's Cangjie code to the FlypyQuick5 code.
 # which are not most frequent ones.
 # word_codes: a nested dictionary of length, code, word and frequency
-def augment_common_words(word_codes, builtin_codes = set()):
+def augment_common_words(word_codes, builtin_codes = dict()):
     for length in [1, 2, 3]:
         if length not in word_codes:
             continue
@@ -671,7 +671,7 @@ def augment_common_words(word_codes, builtin_codes = set()):
 # process a list of words and print the FlypyQuick5 dictionary to a file
 # words: a list of words
 # outfile: the output file, default is sys.stdout
-def process_and_print_flypyquick5_dict(words, outfile=sys.stdout, primary_set = set(), freq_base=0):
+def process_and_print_flypyquick5_dict(words, outfile=sys.stdout, primary_set = dict(), freq_base=0):
     sorted_dict = get_sorted_flypyquick5_dict(words)
     augmented_dict = augment_common_words(sorted_dict, primary_set)
     print_word_codes(augmented_dict, outfile, freq_base)
@@ -974,11 +974,13 @@ def main():
         toneless_phrases = get_sorted_flypyquick5_dict(kTonelessPinyinPhrases)
         # Get the abbreviated codes for the most frequent words
         abbreviated_dicts = get_abbreviated_dict_for(toneless_phrases)
-        abbreviated_codes = set()
+        abbreviated_codes = dict()
         for abbreviated_dict in abbreviated_dicts:
             for length in abbreviated_dict:
                 for code in abbreviated_dict[length]:
-                    abbreviated_codes.add(code)
+                    for word in abbreviated_dict[length][code]:
+                        assert code not in abbreviated_codes, f"Duplicate abbreviated code {code} for word {word}"
+                        abbreviated_codes[code] = word
 
     if args.chinese_code:
         # Print Chinese character codes
@@ -991,17 +993,21 @@ def main():
         process_and_print_flypyquick5_dict(kTonelessPinyinPhrases, sys.stdout)
     elif args.input_file:
         primary_dict = augment_common_words(toneless_phrases, abbreviated_codes)
-        primary_set = set()
+        primary_set = dict()
         for length in primary_dict:
             for code in primary_dict[length]:
-                primary_set.add(code)
+                for word in primary_dict[length][code]:
+                    primary_set[code] = word
+        for code, word in abbreviated_codes.items():
+            if code not in primary_set:
+                primary_set[code] = word
         # Convert Pinyin from input file to Shuangpin (Xiaohe scheme)
         print(get_header(args.name, input_tables))
         words = get_words_from_file(args.input_file)
         if args.difference:
             words = get_difference_set(words)
         pinyin_seq_dict = get_pinyin_seq_for_words(words)
-        process_and_print_flypyquick5_dict(pinyin_seq_dict, sys.stdout, primary_set.union(abbreviated_codes))
+        process_and_print_flypyquick5_dict(pinyin_seq_dict, sys.stdout, primary_set)
     elif args.abbreviate:
         # Print abbreviated codes for most frequent words
         print(get_header(args.name, input_tables))

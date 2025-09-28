@@ -44,8 +44,7 @@ default.custom.yaml 文件為用戶重要配置文件，其中schema_list字段�
 ### 輸入法碼表
 ```
 flypy_quick5.schema.yaml
-flypy_quick5.dict.yaml
-flypy_quick5_ext*.dict.yaml
+flypy_quick5*.dict.yaml
 ```
 
 ### 通用方式

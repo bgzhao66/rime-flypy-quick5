@@ -655,10 +655,10 @@ def augment_common_words(word_codes, builtin_dicts = [dict()], lengths = [1, 2, 
                     continue
                 try:
                     j = 0
-                    while j < 26:
+                    while j < 27:
                         aug_suffix = chr(ord('a') + i % 26)  # 'a', 'b', 'c', ...
                         new_code = code + aug_suffix
-                        if (new_code not in word_codes[length]) and (new_code not in builtin_codes or freq > builtin_codes[new_code][0]):
+                        if (new_code not in word_codes[length]) and (new_code not in builtin_codes or freq > builtin_codes[new_code][0] or (j == 26 and len(word) == 1)):
                             if new_code in builtin_codes:
                                 codes_to_remove[new_code] = builtin_codes[new_code][1]
                             break

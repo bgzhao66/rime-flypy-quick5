@@ -630,7 +630,8 @@ def augment_common_words(word_codes, builtin_codes = dict()):
             not_in_builtin = code not in builtin_codes
             if not_in_builtin:
                 for freq, code, word in word_tuples:
-                    if (freq > max_freq) and (len(word_tuples) == 1 or (code[:-1] not in builtin_codes or word != builtin_codes[code[:-1]])):
+                    codep = code[:-1]
+                    if (freq > max_freq) and (len(word_tuples) == 1 or (codep not in builtin_codes or word != builtin_codes[codep][1])):
                         max_freq = freq
                         max_word = word
             assert max_word is not None or not_in_builtin == False, f"max_word is None for code {code} in length {length}"
@@ -645,7 +646,7 @@ def augment_common_words(word_codes, builtin_codes = dict()):
                     while j < 26:
                         aug_suffix = chr(ord('a') + i % 26)  # 'a', 'b', 'c', ...
                         new_code = code + aug_suffix
-                        if not ((new_code in word_codes[length]) or (new_code in builtin_codes)):
+                        if (new_code not in word_codes[length]) and (new_code not in builtin_codes):
                             break
                         i += 1
                         j += 1
@@ -981,7 +982,7 @@ def main():
                 for code in abbreviated_dict[length]:
                     for word in abbreviated_dict[length][code]:
                         assert code not in abbreviated_codes, f"Duplicate abbreviated code {code} for word {word}"
-                        abbreviated_codes[code] = word
+                        abbreviated_codes[code] = (abbreviated_dict[length][code][word], word)
 
     if args.chinese_code:
         # Print Chinese character codes
@@ -998,10 +999,10 @@ def main():
         for length in primary_dict:
             for code in primary_dict[length]:
                 for word in primary_dict[length][code]:
-                    primary_set[code] = word
-        for code, word in abbreviated_codes.items():
+                    primary_set[code] = (primary_dict[length][code][word], word)
+        for code, freq_word in abbreviated_codes.items():
             if code not in primary_set:
-                primary_set[code] = word
+                primary_set[code] = freq_word
         # Convert Pinyin from input file to Shuangpin (Xiaohe scheme)
         print(get_header(args.name, input_tables))
         words = get_words_from_file(args.input_file)

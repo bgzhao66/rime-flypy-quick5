@@ -627,6 +627,7 @@ def augment_common_words(word_codes, builtin_dicts = [dict()], lengths = [1, 2, 
                     else:
                         builtin_codes[code] = max(builtin_codes[code], (builtin_dict[length][code][word], word))
 
+    codes_to_remove = dict()
     for length in lengths:
         if length not in word_codes:
             continue
@@ -657,7 +658,9 @@ def augment_common_words(word_codes, builtin_dicts = [dict()], lengths = [1, 2, 
                     while j < 26:
                         aug_suffix = chr(ord('a') + i % 26)  # 'a', 'b', 'c', ...
                         new_code = code + aug_suffix
-                        if (new_code not in word_codes[length]) and (new_code not in builtin_codes):
+                        if (new_code not in word_codes[length]) and (new_code not in builtin_codes or freq > builtin_codes[new_code][0]):
+                            if new_code in builtin_codes:
+                                codes_to_remove[new_code] = builtin_codes[new_code][1]
                             break
                         i += 1
                         j += 1
@@ -679,6 +682,16 @@ def augment_common_words(word_codes, builtin_dicts = [dict()], lengths = [1, 2, 
                 del word_codes[length][code][word]
             if len(word_codes[length][code]) == 0:
                 del word_codes[length][code]
+
+    # remove the codes in codes_to_remove
+    for code in codes_to_remove:
+        for builtin_dict in builtin_dicts:
+            length = len(code)
+            if length in builtin_dict and code in builtin_dict[length]:
+                if codes_to_remove[code] in builtin_dict[length][code]:
+                    del builtin_dict[length][code][codes_to_remove[code]]
+                if len(builtin_dict[length][code]) == 0:
+                    del builtin_dict[length][code]
     return word_codes
 
 # process a list of words and print the FlypyQuick5 dictionary to a file

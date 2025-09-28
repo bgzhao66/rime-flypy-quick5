@@ -497,7 +497,7 @@ def get_difference_set(phrase_list):
     return diff_list
 
 # Step 7: Header for Rime dictionary
-def get_header(name, input_tables):
+def get_header(name, input_tables = []):
     hdr = f"""# rime dictionary
 # encoding: utf-8
 
@@ -716,14 +716,13 @@ def get_abbreviated_codes(code_size, word_tuples, used_codes = set()):
 # Get the simpflified FlypyQuick5 dictionary for the builtin characters and phrases.
 # The abbreviated code size is 1 and 2 for the most frequent Chinese characters only, 3 for the most frequent two-character phrases only.
 # return a list of nested dictionaries of length(code_size), code, word and frequency.
-def get_abbreviated_dict_for(toneless_phrases):
+def get_abbreviated_dict_for(toneless_phrases, characters):
     used_codes = set()
     for length in [2, 3]:
         assert length in toneless_phrases, f"Length {length} not in toneless_phrases"
         for code in toneless_phrases[length]:
             used_codes.add(code)
 
-    characters = get_sorted_flypyquick5_dict(convert_to_nested_dict(kCharacterCodes))
 
     # the list of phrase levels to process, each item is a tuple of (phrases_dict, code_sizes)
     phrase_levels = [(characters, [1, 2]), # single characters, 1 and 2-letter codes
@@ -971,52 +970,82 @@ class TestShuangpin(unittest.TestCase):
 # Steo 8: Command-line interface
 def main():
     parser = argparse.ArgumentParser(description="Convert Pinyin with diacritics to Shuangpin (Xiaohe scheme).")
-    parser.add_argument("--chinese_code", help="print chinese code", action="store_true")
-    parser.add_argument("--name", help="the name of the current table", required = False)
-    parser.add_argument("--input_tables", nargs='*', help="Input tables to import", default=[])
-    parser.add_argument("--pinyin_phrase", help="print builtin pinyin phrase", action="store_true")
-    parser.add_argument("--difference", help="use difference set against the builtin pinyin phrases", action="store_true")
-    parser.add_argument("--abbreviate", help="print abbreviated codes for most frequent builtin words", action="store_true")
-    parser.add_argument("--test", help="run unit tests", action="store_true")
-    parser.add_argument("input_file", nargs="?", help="Input file name", default=None)
+    parser.add_argument("--name", help="Name of the current tables", required = False)
+    parser.add_argument("--chinese_code", help="Print chinese code into file", action="store_true")
+    parser.add_argument("--phrase", help="Print pinyin phrase into file", action="store_true")
+    parser.add_argument("--abbreviate", help="Print abbreviated codes into file", action="store_true")
+    parser.add_argument("--extra_table", help="Print extra words into file", action="store_true")
+    parser.add_argument("--difference", help="Difference the set against the builtin phrases", action="store_true")
+    parser.add_argument("--test", help="Run unit tests", action="store_true")
+    parser.add_argument("input_files", nargs='*', help="The list of extra input files", default=[])
     args = parser.parse_args()
 
-    input_tables = args.input_tables
+    args.name = args.name.strip() if args.name else ''
 
-    if any([args.chinese_code, args.pinyin_phrase, args.input_file, args.abbreviate]):
+    phrase_suffix = "_phrase"
+    abbrev_suffix = "_abbrev"
+    extra_suffix = "_extra"
+    file_suffix = ".dict.yaml"
+    path = "../"
+    input_tables = [args.name + t for t in [phrase_suffix, abbrev_suffix, extra_suffix]]
+
+    if not args.test:
         toneless_phrases = get_sorted_flypyquick5_dict(kTonelessPinyinPhrases)
-        # Get the abbreviated codes for the most frequent words
-        abbreviated_dicts = get_abbreviated_dict_for(toneless_phrases)
+        characters = get_sorted_flypyquick5_dict(convert_to_nested_dict(kCharacterCodes))
+        # Abbreviate codes for the most frequent words
+        abbreviated_dicts = get_abbreviated_dict_for(toneless_phrases, characters)
+        # Augment characters
+        augmented_characters = augment_common_words(characters, abbreviated_dicts)
+        # Augment phrases
+        augmented_phrases = augment_common_words(toneless_phrases, abbreviated_dicts)
 
     if args.chinese_code:
-        # Print Chinese character codes
-        print(get_header(args.name, input_tables))
-        character_dict = convert_to_nested_dict(kCharacterCodes)
-        process_and_print_flypyquick5_dict(character_dict, sys.stdout, abbreviated_dicts, freq_base=10000)
-    elif args.pinyin_phrase:
-        # Print Pinyin phrases
-        print(get_header(args.name, input_tables))
-        process_and_print_flypyquick5_dict(kTonelessPinyinPhrases, sys.stdout, abbreviated_dicts)
-    elif args.input_file:
-        primary_dict = augment_common_words(toneless_phrases, abbreviated_dicts)
-        # Convert Pinyin from input file to Shuangpin (Xiaohe scheme)
-        print(get_header(args.name, input_tables))
-        words = get_words_from_file(args.input_file)
+        name = args.name
+        filename = path + name + file_suffix
+        with open(filename, 'w', encoding='utf-8') as f:
+            # Print Chinese character codes
+            print(get_header(name, input_tables), file=f)
+            print_word_codes(augmented_characters, f, freq_base=10000)
+        print(f"Chinese character codes written to {name + file_suffix}")
+
+    if args.phrase:
+        name = args.name + phrase_suffix
+        filename = path + name + file_suffix
+        with open(filename, 'w', encoding='utf-8') as f:
+            # Print Pinyin phrases
+            print(get_header(name), file=f)
+            print_word_codes(augmented_phrases, f)
+        print(f"Pinyin phrases written to {name + file_suffix}")
+
+    if args.abbreviate:
+        name = args.name + abbrev_suffix
+        filename = path + name + file_suffix
+        with open(filename, 'w', encoding='utf-8') as f:
+            # Print abbreviated codes for most frequent words
+            print(get_header(name), file=f)
+            for abbreviated_dict in abbreviated_dicts:
+                print_word_codes(abbreviated_dict, f)
+        print(f"Abbreviated codes written to {name + file_suffix}")
+
+    if args.input_files and args.extra_table:
+        words = []
+        for input_file in args.input_files:
+            words.extend(get_words_from_file(input_file))
         if args.difference:
             words = get_difference_set(words)
-        pinyin_seq_dict = get_pinyin_seq_for_words(words)
-        process_and_print_flypyquick5_dict(pinyin_seq_dict, sys.stdout, [*abbreviated_dicts, primary_dict])
-    elif args.abbreviate:
-        # Print abbreviated codes for most frequent words
-        print(get_header(args.name, input_tables))
-        for abbreviated_dict in abbreviated_dicts:
-            print_word_codes(abbreviated_dict, sys.stdout)
-    elif args.test:
+        extra_dict = get_pinyin_seq_for_words(words)
+
+        name = args.name + extra_suffix
+        filename = path + name + file_suffix
+        with open(filename, 'w', encoding='utf-8') as f:
+            # Print extra words from input files
+            print(get_header(name), file=f)
+            process_and_print_flypyquick5_dict(extra_dict, f, [augmented_phrases, *abbreviated_dicts])
+        print(f"Extra words written to {name + file_suffix}")
+
+    if args.test:
         # Run unit tests
         unittest.main(argv=[sys.argv[0]], exit=False)
-    else:
-        parser.print_help()
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()

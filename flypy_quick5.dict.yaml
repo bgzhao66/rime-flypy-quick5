@@ -29,9 +29,9 @@ encoder:
     - length_equal: 9
       formula: "AaAbBaBbCaCbDaDbHaHbIaIbIc"
 import_tables:
+  - flypy_quick5_phrase
   - flypy_quick5_abbrev
-  - flypy_quick5_ext
-  - flypy_quick5_extA
+  - flypy_quick5_extra
 ...
 
 吖	aalr	13035

@@ -417,8 +417,11 @@ def get_selected_pys(flypys):
 
 def get_flypyquick5_seq(word, pinyin_seq):
     """Convert a word and its Pinyin sequence to FlypyQuick5 sequences."""
-    toneless_seq = get_toneless_pinyin_seq(pinyin_seq)
-    flypys = pinyin_to_shuangpin_seq(toneless_seq)
+    try:
+        toneless_seq = get_toneless_pinyin_seq(pinyin_seq)
+        flypys = pinyin_to_shuangpin_seq(toneless_seq)
+    except ValueError as e:
+        raise ValueError(f"Error converting Pinyin to Shuangpin for word '{word}', '{pinyin_seq}'")
     freq = get_freq_of_word(word, ' '.join(toneless_seq), kWordsFreq)
     mode_mapping = {
         1: 'last-first',

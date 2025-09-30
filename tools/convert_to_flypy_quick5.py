@@ -478,7 +478,7 @@ def get_pinyin_seq_for_words(words):
     return pinyin_seq_dict
 
 # Get a list of words from an input file, one word per line.
-def get_words_from_file(file):
+def get_words_from_file(file, min_length=2, max_length=20):
     words = []
     with open(file, 'r') as f:
         for line in f:
@@ -487,7 +487,10 @@ def get_words_from_file(file):
                 continue
             if line[0] == '#':
                 continue
-            words.append(line)
+            word = line.split()[0]
+            if len(word) < min_length or len(word) > max_length:
+                continue
+            words.append(word)
     return words
 
 # Get the difference set of phrases against the builtin Pinyin phrases.

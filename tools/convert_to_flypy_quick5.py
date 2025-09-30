@@ -1047,11 +1047,12 @@ def main():
         print(f"Abbreviated codes written to {name + file_suffix}")
 
     if args.input_files and args.extra_table:
-        words = []
+        words = set()
         for input_file in args.input_files:
-            words.extend(get_words_from_file(input_file))
+            words = words.union(get_words_from_file(input_file))
         if args.difference:
-            words = get_difference_set(words)
+            words = words.difference(kTonelessPinyinPhrases.keys())
+        print(f"Total {len(words)} extra words read from input files.")
         extra_dict = get_pinyin_seq_for_words(words)
 
         name = args.name + extra_suffix

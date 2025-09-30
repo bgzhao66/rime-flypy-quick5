@@ -8,6 +8,29 @@ import unicodedata
 
 import unittest
 
+import signal
+import code
+import inspect
+
+# Dump a variable in the current stack for debugging
+def dump_var_in_stack(varname):
+    for fi in inspect.stack():
+        frame = fi.frame
+        if varname in frame.f_locals:
+            print(f"\nFound '{varname}' in {fi.function} "
+                  f"(File {fi.filename}, line {fi.lineno}):")
+            print(f"    {varname} = {frame.f_locals[varname]!r}")
+
+# Print current local variables for debugging
+def debug_signal_handler(signal, frame):
+    code.interact(local=dict(globals(), **locals()))
+    print("Debug signal handler invoked. Current local variables:")
+
+# Use command: kill -SIGUSR1 <pid>
+signal.signal(signal.SIGUSR1, debug_signal_handler)
+
+# Step 1: Pinyin with diacritics to Toneless Pinyin
+
 """
 Convert Pinyin with diacritics → Toneless Pinyin → Shuangpin (Xiaohe scheme),
 with unit tests.

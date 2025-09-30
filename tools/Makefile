@@ -8,7 +8,8 @@ all:
 				--extra_table --difference 	\
 				extra/words.txt       \
 				extra/12dicts.txt     \
-				extra/360wdict.txt
+				extra/360wdict.txt    \
+				extra/essay.txt
 
 	echo "All tables converted"
 

@@ -7,3 +7,5 @@
 perl -i -pe 's/即時(?=.+shi shi)/實時/g' $1
 perl -i -pe 's/蔥姜/蔥薑/g' $1
 perl -i -pe 's/團伙/團夥/g' $1
+perl -i -pe 's/包乾/包幹/g' $1
+perl -i -pe 's/幹棗/乾棗/g' $1

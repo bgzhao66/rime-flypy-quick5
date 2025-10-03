@@ -9,7 +9,8 @@ all:
 				extra/words.txt       \
 				extra/12dicts.txt     \
 				extra/360wdict.txt    \
-				extra/essay.txt
+				extra/essay.txt       \
+				extra/luna_classic.txt
 
 	echo "All tables converted"
 

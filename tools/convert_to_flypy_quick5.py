@@ -291,6 +291,7 @@ def get_frequency_from_files(files):
                 line = line.strip()
                 line_no += 1
                 word, code, frequency = line.split('\t')
+                code = re.sub(r'(?<=[ln])ue', 've', code)
                 if word not in freq:
                     freq[word] = dict()
                 if code not in freq[word]:
@@ -823,7 +824,10 @@ class TestShuangpin(unittest.TestCase):
         self.assertEqual(toneless_seq, ["ma", "ni", "hao", "lv"])
 
     def test_get_flypyquick5_seq(self):
-        testcases = [("你好", ["nǐ", "hǎo"], "nihcdo"),
+        testcases = [("略", ["lüè"], "ltrw"),
+                     ("略", ["lue"], "ltrw"),
+                     ("略", ["lve"], "ltrw"),
+                     ("你好", ["nǐ", "hǎo"], "nihcdo"),
                      ("长臂猿", ["cháng", "bì", "yuán"], "ihbiyrvp"),
                      ("世界地圖", ["shì", "jiè", "dì", "tú"], "uijpditu"),
                      ("中華人民共和國", ["zhōng", "huá", "rén", "mín", "gòng", "hé", "guó"], "vshxrfmbm"),

@@ -877,6 +877,11 @@ def fix_li_pattern(text):
             text = re.sub(r'裡', '里', text)
     return text
 
+def fix_li2_pattern(text):
+    if '裡' in text:
+        text = re.sub(r'(?<=[百千萬幾數餘])裡(?![挑])', '里', text)
+    return text
+
 def fix_shishi_pattern(text):
     if '即時' in text:
         text = re.sub(r'即時(?=.+shi shi)', '實時', text)
@@ -920,6 +925,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     kActions = [fix_li_pattern,
+                fix_li2_pattern,
                 fix_shishi_pattern,
                 fix_jiang_pattern,
                 fix_tuanhuo_pattern,

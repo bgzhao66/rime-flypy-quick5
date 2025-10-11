@@ -1102,7 +1102,7 @@ def main():
 
         # Abbreviate codes for the most frequent extra words
         append_used_codes(used_codes, [augmented_characters, augmented_phrases])
-        abbreviated_extra_dicts = get_abbreviated_dict_for(sorted_extra_dict, {1:[]}, used_codes, min_freq=10)
+        abbreviated_extra_dicts = get_abbreviated_dict_for(sorted_extra_dict, {1:[]}, used_codes, min_freq=1)
 
         # Augment extra words
         augmented_extra_dict = augment_common_words(sorted_extra_dict, [augmented_phrases, *abbreviated_dicts, *abbreviated_extra_dicts])

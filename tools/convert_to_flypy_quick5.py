@@ -1054,7 +1054,7 @@ def main():
     abbrevextra_suffix = "_abbrevextra"
     file_suffix = ".dict.yaml"
     path = "../"
-    input_tables = [args.name + t for t in [phrase_suffix, abbrev_suffix, extra_suffix, abbrevextra_suffix]]
+    input_tables = [args.name + t for t in [phrase_suffix, abbrev_suffix, abbrevextra_suffix]]
 
     if not args.test:
         toneless_phrases = get_sorted_flypyquick5_dict(kTonelessPinyinPhrases)
@@ -1066,15 +1066,6 @@ def main():
         augmented_characters = augment_common_words(characters, abbreviated_dicts)
         # Augment phrases
         augmented_phrases = augment_common_words(toneless_phrases, abbreviated_dicts)
-
-    if args.chinese_code:
-        name = args.name
-        filename = path + name + file_suffix
-        with open(filename, 'w', encoding='utf-8') as f:
-            # Print Chinese character codes
-            print(get_header(name, input_tables), file=f)
-            print_word_codes(augmented_characters, f, freq_base=10000)
-        print(f"Chinese character codes written to {name + file_suffix}")
 
     if args.phrase:
         name = args.name + phrase_suffix
@@ -1116,13 +1107,31 @@ def main():
         # Augment extra words
         augmented_extra_dict = augment_common_words(sorted_extra_dict, [augmented_phrases, *abbreviated_dicts, *abbreviated_extra_dicts])
 
-        name = args.name + extra_suffix
-        filename = path + name + file_suffix
-        with open(filename, 'w', encoding='utf-8') as f:
-            # Print extra words from input files
-            print(get_header(name), file=f)
-            print_word_codes(augmented_extra_dict, f)
-        print(f"Extra words written to {name + file_suffix}")
+        # Split extra words into parts
+        boundaries = [3, 7, max(augmented_extra_dict.keys())]
+        length = 0
+        extra_tables = []
+        for i in range(len(boundaries)):
+            upper = boundaries[i]
+            name = args.name + extra_suffix + str(i)
+            extra_tables.append(name)
+
+            augmented_dict_part = dict()
+            while length < upper:
+                length += 1
+                if length not in augmented_extra_dict:
+                    continue
+                augmented_dict_part[length] = augmented_extra_dict[length]
+
+            filename = path + name + file_suffix
+            with open(filename, 'w', encoding='utf-8') as f:
+                # Print extra words from input files
+                print(get_header(name), file=f)
+                print_word_codes(augmented_dict_part, f)
+            print(f"Extra words of part {i} written to {name + file_suffix}")
+
+        # Update input_tables
+        input_tables.extend(extra_tables)
 
     if args.abbreviate and args.input_files and args.extra_table:
         name = args.name + abbrevextra_suffix
@@ -1133,6 +1142,15 @@ def main():
             for abbreviated_dict in abbreviated_extra_dicts:
                 print_word_codes(abbreviated_dict, f)
         print(f"Abbreviated extra codes written to {name + file_suffix}")
+
+    if args.chinese_code:
+        name = args.name
+        filename = path + name + file_suffix
+        with open(filename, 'w', encoding='utf-8') as f:
+            # Print Chinese character codes
+            print(get_header(name, input_tables), file=f)
+            print_word_codes(augmented_characters, f, freq_base=10000)
+        print(f"Chinese character codes written to {name + file_suffix}")
 
     if args.test:
         # Run unit tests

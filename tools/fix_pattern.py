@@ -4758,6 +4758,11 @@ def fix_baogan_pattern(text):
         text = re.sub(r'包乾', '包幹', text)
     return text
 
+def fix_changgan_pattern(text):
+    if '長幹' in text:
+        text = re.sub(r'長幹', '長干', text)
+    return text
+
 def fix_ganzao_pattern(text):
     if '幹棗' in text:
         text = re.sub(r'幹棗', '乾棗', text)
@@ -4786,6 +4791,7 @@ if __name__ == '__main__':
                 fix_jiang_pattern,
                 fix_tuanhuo_pattern,
                 fix_baogan_pattern,
+                fix_changgan_pattern,
                 fix_ganzao_pattern,
                 fix_xian_pattern,
                 fix_xian2_pattern]

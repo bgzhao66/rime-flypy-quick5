@@ -7,6 +7,7 @@ all:
 	python3 ./convert_to_flypy_quick5.py --name $(PRIMARY_NAME) --chinese_code  --phrase --abbreviate \
 				--extra_table --difference 	\
 				extra/360wdict.txt    \
+				extra/essay.txt    \
 				extra/words.txt
 
 	echo "All tables converted"

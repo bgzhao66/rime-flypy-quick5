@@ -659,7 +659,7 @@ def get_sorted_flypyquick5_dict(words, get_frequency = get_frequency_default):
 # Augment the common words when there are conflicts by appending the first character's Cangjie code to the FlypyQuick5 code.
 # which are not most frequent ones.
 # word_codes: a nested dictionary of length, code, word and frequency
-def augment_common_words(word_codes, builtin_dicts = [dict()], lengths = [1, 2, 3]):
+def augment_common_words(word_codes, builtin_dicts = [dict()], lengths = [1, 2, 3], preemptive=True):
     builtin_codes = dict()
     for builtin_dict in builtin_dicts:
         for length in builtin_dict:
@@ -702,7 +702,7 @@ def augment_common_words(word_codes, builtin_dicts = [dict()], lengths = [1, 2, 
                     while j < 27:
                         aug_suffix = chr(ord('a') + i % 26)  # 'a', 'b', 'c', ...
                         new_code = code + aug_suffix
-                        if (new_code not in word_codes[length]) and (new_code not in builtin_codes or freq > builtin_codes[new_code][0] or (j == 26 and len(word) == 1)):
+                        if (new_code not in word_codes[length]) and (new_code not in builtin_codes or (preemptive and freq > builtin_codes[new_code][0]) or (j == 26 and len(word) == 1)):
                             if new_code in builtin_codes:
                                 codes_to_remove[new_code] = builtin_codes[new_code][1]
                             break
@@ -1105,7 +1105,7 @@ def main():
         abbreviated_extra_dicts = get_abbreviated_dict_for(sorted_extra_dict, {1:[]}, used_codes, min_freq=1)
 
         # Augment extra words
-        augmented_extra_dict = augment_common_words(sorted_extra_dict, [augmented_phrases, *abbreviated_dicts, *abbreviated_extra_dicts])
+        augmented_extra_dict = augment_common_words(sorted_extra_dict, [augmented_phrases, *abbreviated_dicts, *abbreviated_extra_dicts], preemptive=False)
 
         # Split extra words into parts
         boundaries = [3, 7, max(augmented_extra_dict.keys())]

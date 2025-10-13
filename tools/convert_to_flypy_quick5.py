@@ -8,6 +8,29 @@ import unicodedata
 
 import unittest
 
+import signal
+import code
+import inspect
+
+# Dump a variable in the current stack for debugging
+def dump_var_in_stack(varname):
+    for fi in inspect.stack():
+        frame = fi.frame
+        if varname in frame.f_locals:
+            print(f"\nFound '{varname}' in {fi.function} "
+                  f"(File {fi.filename}, line {fi.lineno}):")
+            print(f"    {varname} = {frame.f_locals[varname]!r}")
+
+# Print current local variables for debugging
+def debug_signal_handler(signal, frame):
+    code.interact(local=dict(globals(), **locals()))
+    print("Debug signal handler invoked. Current local variables:")
+
+# Use command: kill -SIGUSR1 <pid>
+signal.signal(signal.SIGUSR1, debug_signal_handler)
+
+# Step 1: Pinyin with diacritics to Toneless Pinyin
+
 """
 Convert Pinyin with diacritics → Toneless Pinyin → Shuangpin (Xiaohe scheme),
 with unit tests.
@@ -258,7 +281,7 @@ kPinyinPhrases = purge_inconsistent_phrases(get_pinyin_phrases(), strict=False)
 PINYIN_DICT = "pinyin_simp.dict.txt"
 PINYIN_EXT1_DICT = "pinyin_simp_ext1.dict.txt"
 
-# get the frequency of words from a file
+# get the frequency of words from a file with format "word<tab>code<tab>frequency"
 def get_frequency_from_files(files):
     freq = dict()
     for file in files:
@@ -268,6 +291,7 @@ def get_frequency_from_files(files):
                 line = line.strip()
                 line_no += 1
                 word, code, frequency = line.split('\t')
+                code = re.sub(r'(?<=[ln])ue', 've', code)
                 if word not in freq:
                     freq[word] = dict()
                 if code not in freq[word]:
@@ -415,11 +439,17 @@ def get_selected_pys(flypys):
 # Returns a list of FlypyQuick5 sequences for the given word and Pinyin sequence.
 #  [("flypyquick5_seq1", freq1), ("flypyquick5_seq2", freq2), ...]
 
-def get_flypyquick5_seq(word, pinyin_seq):
+def get_frequency_default(word, code):
+    return get_freq_of_word(word, code, kWordsFreq)
+
+def get_flypyquick5_seq(word, pinyin_seq, get_frequency = get_frequency_default):
     """Convert a word and its Pinyin sequence to FlypyQuick5 sequences."""
-    toneless_seq = get_toneless_pinyin_seq(pinyin_seq)
-    flypys = pinyin_to_shuangpin_seq(toneless_seq)
-    freq = get_freq_of_word(word, ' '.join(toneless_seq), kWordsFreq)
+    try:
+        toneless_seq = get_toneless_pinyin_seq(pinyin_seq)
+        flypys = pinyin_to_shuangpin_seq(toneless_seq)
+    except ValueError as e:
+        raise ValueError(f"Error converting Pinyin to Shuangpin for word '{word}', '{pinyin_seq}'")
+    freq = get_frequency(word, ' '.join(toneless_seq))
     mode_mapping = {
         1: 'last-first',
         2: 'last-first',
@@ -441,12 +471,12 @@ def get_flypyquick5_seq(word, pinyin_seq):
 # words: a dictionary of word and a list of pinyin code sequences, e.g. {'word': [['py1', 'py2'], ['py3', 'py4']]}
 # return a dictionary of word and a list of FlypyQuick5 sequences, e.g. {'word': [("flypyquick5_seq1", freq1), ("flypyquick5_seq2", freq2), ...]}
 
-def get_flypyquick5_dict(words):
+def get_flypyquick5_dict(words, get_frequency = get_frequency_default):
     flypyquick5_dict = dict()
     for word in words.keys():
         for pinyin_seq in words[word]:
             try:
-                flypyquick5_seq = get_flypyquick5_seq(word, pinyin_seq)
+                flypyquick5_seq = get_flypyquick5_seq(word, pinyin_seq, get_frequency)
                 if word not in flypyquick5_dict:
                     flypyquick5_dict[word] = []
                 for seq, freq in flypyquick5_seq:
@@ -475,16 +505,30 @@ def get_pinyin_seq_for_words(words):
     return pinyin_seq_dict
 
 # Get a list of words from an input file, one word per line.
-def get_words_from_file(file):
-    words = []
+def get_words_from_file(file, words = dict(), min_length=2, max_length=20):
+    lineno = 0
     with open(file, 'r') as f:
         for line in f:
             line = line.strip()
+            lineno += 1
             if len(line) == 0:
                 continue
             if line[0] == '#':
                 continue
-            words.append(line)
+            items = line.split()
+            word = items[0]
+            frequency = 0
+            if len(items) >= 2:
+                try:
+                    frequency = int(items[-1])
+                except ValueError:
+                    pass
+            if len(word) < min_length or len(word) > max_length:
+                continue
+            if word not in words:
+                words[word] = (0, 0)
+            f, p = words[word]
+            words[word] = (f + frequency, -lineno if p == 0 else p)
     return words
 
 # Get the difference set of phrases against the builtin Pinyin phrases.
@@ -497,7 +541,7 @@ def get_difference_set(phrase_list):
     return diff_list
 
 # Step 7: Header for Rime dictionary
-def get_header(name, input_tables):
+def get_header(name, input_tables = []):
     hdr = f"""# rime dictionary
 # encoding: utf-8
 
@@ -513,6 +557,7 @@ min_phrase_weight: 100
 encoder:
   exclude_patterns:
     - '^[a-z].?$'
+    - '^[a-z]..$'
   rules:
     - length_equal: 2
       formula: "AaAbBaBbBcAd"
@@ -605,8 +650,8 @@ def print_word_codes(word_codes, outfile=sys.stdout, freq_base=0):
 # Get the sorted FlypyQuick5 dictionary from a list of words.
 # words: a dictionary of words, {"word": [["py1", "py2"], ["py3", "py4"]]}
 # return a nested dictionary of length, code, word and frequency
-def get_sorted_flypyquick5_dict(words):
-    words_dict = get_flypyquick5_dict(words)
+def get_sorted_flypyquick5_dict(words, get_frequency = get_frequency_default):
+    words_dict = get_flypyquick5_dict(words, get_frequency)
     sorted_dict = sort_by_length_and_code(words_dict)
     return sorted_dict
 
@@ -614,8 +659,20 @@ def get_sorted_flypyquick5_dict(words):
 # Augment the common words when there are conflicts by appending the first character's Cangjie code to the FlypyQuick5 code.
 # which are not most frequent ones.
 # word_codes: a nested dictionary of length, code, word and frequency
-def augment_common_words(word_codes, builtin_codes = set()):
-    for length in [1, 2, 3]:
+def augment_common_words(word_codes, builtin_dicts = [dict()], lengths = [1, 2, 3], preemptive=True):
+    builtin_codes = dict()
+    for builtin_dict in builtin_dicts:
+        for length in builtin_dict:
+            for code in builtin_dict[length]:
+                for word in builtin_dict[length][code]:
+                    assert code not in builtin_codes or len(code) > 7, f"Duplicate builtin code {code} for word {word}"
+                    if code not in builtin_codes:
+                        builtin_codes[code] = (builtin_dict[length][code][word], word)
+                    else:
+                        builtin_codes[code] = max(builtin_codes[code], (builtin_dict[length][code][word], word))
+
+    codes_to_remove = dict()
+    for length in lengths:
         if length not in word_codes:
             continue
 
@@ -629,7 +686,8 @@ def augment_common_words(word_codes, builtin_codes = set()):
             not_in_builtin = code not in builtin_codes
             if not_in_builtin:
                 for freq, code, word in word_tuples:
-                    if freq > max_freq:
+                    codep = code[:-1]
+                    if (freq > max_freq) and (len(word_tuples) == 1 or (codep not in builtin_codes or word != builtin_codes[codep][1])):
                         max_freq = freq
                         max_word = word
             assert max_word is not None or not_in_builtin == False, f"max_word is None for code {code} in length {length}"
@@ -641,10 +699,12 @@ def augment_common_words(word_codes, builtin_codes = set()):
                     continue
                 try:
                     j = 0
-                    while j < 26:
+                    while j < 27:
                         aug_suffix = chr(ord('a') + i % 26)  # 'a', 'b', 'c', ...
                         new_code = code + aug_suffix
-                        if not ((new_code in word_codes[length]) or (new_code in builtin_codes)):
+                        if (new_code not in word_codes[length]) and (new_code not in builtin_codes or (preemptive and freq > builtin_codes[new_code][0]) or (j == 26 and len(word) == 1)):
+                            if new_code in builtin_codes:
+                                codes_to_remove[new_code] = builtin_codes[new_code][1]
                             break
                         i += 1
                         j += 1
@@ -666,13 +726,23 @@ def augment_common_words(word_codes, builtin_codes = set()):
                 del word_codes[length][code][word]
             if len(word_codes[length][code]) == 0:
                 del word_codes[length][code]
+
+    # remove the codes in codes_to_remove
+    for code in codes_to_remove:
+        for builtin_dict in builtin_dicts:
+            length = len(code)
+            if length in builtin_dict and code in builtin_dict[length]:
+                if codes_to_remove[code] in builtin_dict[length][code]:
+                    del builtin_dict[length][code][codes_to_remove[code]]
+                if len(builtin_dict[length][code]) == 0:
+                    del builtin_dict[length][code]
     return word_codes
 
 # process a list of words and print the FlypyQuick5 dictionary to a file
 # words: a list of words
 # outfile: the output file, default is sys.stdout
-def process_and_print_flypyquick5_dict(words, outfile=sys.stdout, primary_set = set(), freq_base=0):
-    sorted_dict = get_sorted_flypyquick5_dict(words)
+def process_and_print_flypyquick5_dict(words, outfile=sys.stdout, primary_set = [dict()], freq_base=0, get_frequency = get_frequency_default):
+    sorted_dict = get_sorted_flypyquick5_dict(words, get_frequency)
     augmented_dict = augment_common_words(sorted_dict, primary_set)
     print_word_codes(augmented_dict, outfile, freq_base)
 
@@ -683,9 +753,11 @@ def process_and_print_flypyquick5_dict(words, outfile=sys.stdout, primary_set = 
 # word_tuples: a list of word tuple (freq, code, word) in descending order of frequency
 # return a dictionary of word and its abbreviated code, which is a nested dictionary of length(code_size), code, word and frequency.
 # Only the most frequent word for each abbreviated code is kept.
-def get_abbreviated_codes(code_size, word_tuples, used_codes = set()):
+def get_abbreviated_codes(code_size, word_tuples, used_codes = set(), min_freq=0):
     abbreviated_dict = dict()
     for freq, code, word in word_tuples:
+        if freq[0] < min_freq:
+            continue
         simple_code = code[:code_size]
         if simple_code in used_codes:
             continue
@@ -703,19 +775,15 @@ def get_abbreviated_codes(code_size, word_tuples, used_codes = set()):
 # Get the simpflified FlypyQuick5 dictionary for the builtin characters and phrases.
 # The abbreviated code size is 1 and 2 for the most frequent Chinese characters only, 3 for the most frequent two-character phrases only.
 # return a list of nested dictionaries of length(code_size), code, word and frequency.
-def get_abbreviated_dict_for(toneless_phrases):
-    used_codes = set()
+def get_abbreviated_dict_for(toneless_phrases, characters, used_codes = set(), min_freq=0):
     for length in [2, 3]:
         assert length in toneless_phrases, f"Length {length} not in toneless_phrases"
         for code in toneless_phrases[length]:
             used_codes.add(code)
 
-    characters = get_sorted_flypyquick5_dict(convert_to_nested_dict(kCharacterCodes))
-    tonal_phrases = get_sorted_flypyquick5_dict(kPinyinPhrases)
-
     # the list of phrase levels to process, each item is a tuple of (phrases_dict, code_sizes)
     phrase_levels = [(characters, [1, 2]), # single characters, 1 and 2-letter codes
-                     ({1: characters[1], 2: tonal_phrases[2]}, [3]), # two-character phrases, 3-letter codes
+                     ({1: characters[1], 2: toneless_phrases[2]}, [3]), # two-character phrases, 3-letter codes
                      ({1: characters[1], 2: toneless_phrases[2]}, [4]), # two-character phrases, 4-letter codes
                      ({2: toneless_phrases[2]}, [5]), # two-character phrases, 5-letter codes
                      ({3: toneless_phrases[3]}, [5]), # three-character phrases, 5-letter codes
@@ -727,10 +795,16 @@ def get_abbreviated_dict_for(toneless_phrases):
     for phrases_dict, code_sizes in phrase_levels:
         phrase_tuples = get_sorted_word_tuples(phrases_dict)
         for code_size in code_sizes:
-            abbreviated_dicts.append(get_abbreviated_codes(code_size, phrase_tuples, used_codes))
+            abbreviated_dicts.append(get_abbreviated_codes(code_size, phrase_tuples, used_codes, min_freq))
 
     # return the abbreviated dictionary
     return abbreviated_dicts
+
+def append_used_codes(used_codes, word_code_dicts = [dict()]):
+    for word_code_dict in word_code_dicts:
+        for length in word_code_dict:
+            for code in word_code_dict[length]:
+                used_codes.add(code)
 
 # ---------------------- Unit Tests ----------------------
 class TestShuangpin(unittest.TestCase):
@@ -770,7 +844,10 @@ class TestShuangpin(unittest.TestCase):
         self.assertEqual(toneless_seq, ["ma", "ni", "hao", "lv"])
 
     def test_get_flypyquick5_seq(self):
-        testcases = [("你好", ["nǐ", "hǎo"], "nihcdo"),
+        testcases = [("略", ["lüè"], "ltrw"),
+                     ("略", ["lue"], "ltrw"),
+                     ("略", ["lve"], "ltrw"),
+                     ("你好", ["nǐ", "hǎo"], "nihcdo"),
                      ("长臂猿", ["cháng", "bì", "yuán"], "ihbiyrvp"),
                      ("世界地圖", ["shì", "jiè", "dì", "tú"], "uijpditu"),
                      ("中華人民共和國", ["zhōng", "huá", "rén", "mín", "gòng", "hé", "guó"], "vshxrfmbm"),
@@ -901,7 +978,7 @@ class TestShuangpin(unittest.TestCase):
                 "juch": {"颶": (100, -1), "犋": (50, -2)},
             }
         }
-        augmented_dict = augment_common_words(word_codes, set(primary_dict[2].keys()))
+        augmented_dict = augment_common_words(word_codes, [primary_dict])
         self.assertFalse("nihcd" in augmented_dict[2])
         self.assertTrue("uijpl" in augmented_dict[2])
         self.assertTrue("nihcda" in augmented_dict[2])
@@ -959,61 +1036,125 @@ class TestShuangpin(unittest.TestCase):
 # Steo 8: Command-line interface
 def main():
     parser = argparse.ArgumentParser(description="Convert Pinyin with diacritics to Shuangpin (Xiaohe scheme).")
-    parser.add_argument("--chinese_code", help="print chinese code", action="store_true")
-    parser.add_argument("--name", help="the name of the current table", required = False)
-    parser.add_argument("--input_tables", nargs='*', help="Input tables to import", default=[])
-    parser.add_argument("--pinyin_phrase", help="print builtin pinyin phrase", action="store_true")
-    parser.add_argument("--difference", help="use difference set against the builtin pinyin phrases", action="store_true")
-    parser.add_argument("--abbreviate", help="print abbreviated codes for most frequent builtin words", action="store_true")
-    parser.add_argument("--test", help="run unit tests", action="store_true")
-    parser.add_argument("input_file", nargs="?", help="Input file name", default=None)
+    parser.add_argument("--name", help="Name of the current tables", required = False)
+    parser.add_argument("--chinese_code", help="Print chinese code into file", action="store_true")
+    parser.add_argument("--phrase", help="Print pinyin phrase into file", action="store_true")
+    parser.add_argument("--abbreviate", help="Print abbreviated codes into file", action="store_true")
+    parser.add_argument("--extra_table", help="Print extra words into file", action="store_true")
+    parser.add_argument("--difference", help="Difference the set against the builtin phrases", action="store_true")
+    parser.add_argument("--test", help="Run unit tests", action="store_true")
+    parser.add_argument("input_files", nargs='*', help="The list of extra input files", default=[])
     args = parser.parse_args()
 
-    input_tables = args.input_tables
+    args.name = args.name.strip() if args.name else ''
 
-    if any([args.chinese_code, args.input_file, args.abbreviate]):
+    phrase_suffix = "_phrase"
+    abbrev_suffix = "_abbrev"
+    extra_suffix = "_extra"
+    abbrevextra_suffix = "_abbrevextra"
+    file_suffix = ".dict.yaml"
+    path = "../"
+    input_tables = [args.name + t for t in [phrase_suffix, abbrev_suffix, abbrevextra_suffix]]
+
+    if not args.test:
         toneless_phrases = get_sorted_flypyquick5_dict(kTonelessPinyinPhrases)
-        # Get the abbreviated codes for the most frequent words
-        abbreviated_dicts = get_abbreviated_dict_for(toneless_phrases)
-        abbreviated_codes = set()
-        for abbreviated_dict in abbreviated_dicts:
-            for length in abbreviated_dict:
-                for code in abbreviated_dict[length]:
-                    abbreviated_codes.add(code)
+        characters = get_sorted_flypyquick5_dict(convert_to_nested_dict(kCharacterCodes))
+        used_codes = set()
+        # Abbreviate codes for the most frequent words
+        abbreviated_dicts = get_abbreviated_dict_for(toneless_phrases, characters, used_codes)
+        # Augment characters
+        augmented_characters = augment_common_words(characters, abbreviated_dicts)
+        # Augment phrases
+        augmented_phrases = augment_common_words(toneless_phrases, abbreviated_dicts)
+
+    if args.phrase:
+        name = args.name + phrase_suffix
+        filename = path + name + file_suffix
+        with open(filename, 'w', encoding='utf-8') as f:
+            # Print Pinyin phrases
+            print(get_header(name), file=f)
+            print_word_codes(augmented_phrases, f)
+        print(f"Pinyin phrases written to {name + file_suffix}")
+
+    if args.abbreviate:
+        name = args.name + abbrev_suffix
+        filename = path + name + file_suffix
+        with open(filename, 'w', encoding='utf-8') as f:
+            # Print abbreviated codes for most frequent words
+            print(get_header(name), file=f)
+            for abbreviated_dict in abbreviated_dicts:
+                print_word_codes(abbreviated_dict, f)
+        print(f"Abbreviated codes written to {name + file_suffix}")
+
+    if args.input_files and args.extra_table:
+        words = dict()
+        for input_file in args.input_files:
+            words = get_words_from_file(input_file, words)
+        if args.difference:
+            for w in kTonelessPinyinPhrases.keys():
+                if w in words:
+                    del words[w]
+        print(f"Total {len(words)} extra words read from input files.")
+        extra_dict = get_pinyin_seq_for_words(words)
+
+        get_frequency = lambda word, code: words[word] if word in words else (0, -sys.maxsize+1)
+        sorted_extra_dict = get_sorted_flypyquick5_dict(extra_dict, get_frequency)
+
+        # Abbreviate codes for the most frequent extra words
+        append_used_codes(used_codes, [augmented_characters, augmented_phrases])
+        abbreviated_extra_dicts = get_abbreviated_dict_for(sorted_extra_dict, {1:[]}, used_codes, min_freq=1)
+
+        # Augment extra words
+        augmented_extra_dict = augment_common_words(sorted_extra_dict, [augmented_phrases, *abbreviated_dicts, *abbreviated_extra_dicts], preemptive=False)
+
+        # Split extra words into parts
+        boundaries = [3, 7, max(augmented_extra_dict.keys())]
+        length = 0
+        extra_tables = []
+        for i in range(len(boundaries)):
+            upper = boundaries[i]
+            name = args.name + extra_suffix + str(i)
+            extra_tables.append(name)
+
+            augmented_dict_part = dict()
+            while length < upper:
+                length += 1
+                if length not in augmented_extra_dict:
+                    continue
+                augmented_dict_part[length] = augmented_extra_dict[length]
+
+            filename = path + name + file_suffix
+            with open(filename, 'w', encoding='utf-8') as f:
+                # Print extra words from input files
+                print(get_header(name), file=f)
+                print_word_codes(augmented_dict_part, f)
+            print(f"Extra words of part {i} written to {name + file_suffix}")
+
+        # Update input_tables
+        input_tables.extend(extra_tables)
+
+    if args.abbreviate and args.input_files and args.extra_table:
+        name = args.name + abbrevextra_suffix
+        filename = path + name + file_suffix
+        with open(filename, 'w', encoding='utf-8') as f:
+            # Print abbreviated codes for most frequent words
+            print(get_header(name), file=f)
+            for abbreviated_dict in abbreviated_extra_dicts:
+                print_word_codes(abbreviated_dict, f)
+        print(f"Abbreviated extra codes written to {name + file_suffix}")
 
     if args.chinese_code:
-        # Print Chinese character codes
-        print(get_header(args.name, input_tables))
-        character_dict = convert_to_nested_dict(kCharacterCodes)
-        process_and_print_flypyquick5_dict(character_dict, sys.stdout, abbreviated_codes, freq_base=10000)
-    elif args.pinyin_phrase:
-        # Print Pinyin phrases
-        print(get_header(args.name, input_tables))
-        process_and_print_flypyquick5_dict(kTonelessPinyinPhrases, sys.stdout)
-    elif args.input_file:
-        primary_dict = augment_common_words(toneless_phrases, abbreviated_codes)
-        primary_set = set()
-        for length in primary_dict:
-            for code in primary_dict[length]:
-                primary_set.add(code)
-        # Convert Pinyin from input file to Shuangpin (Xiaohe scheme)
-        print(get_header(args.name, input_tables))
-        words = get_words_from_file(args.input_file)
-        if args.difference:
-            words = get_difference_set(words)
-        pinyin_seq_dict = get_pinyin_seq_for_words(words)
-        process_and_print_flypyquick5_dict(pinyin_seq_dict, sys.stdout, primary_set.union(abbreviated_codes))
-    elif args.abbreviate:
-        # Print abbreviated codes for most frequent words
-        print(get_header(args.name, input_tables))
-        for abbreviated_dict in abbreviated_dicts:
-            print_word_codes(abbreviated_dict, sys.stdout)
-    elif args.test:
+        name = args.name
+        filename = path + name + file_suffix
+        with open(filename, 'w', encoding='utf-8') as f:
+            # Print Chinese character codes
+            print(get_header(name, input_tables), file=f)
+            print_word_codes(augmented_characters, f, freq_base=10000)
+        print(f"Chinese character codes written to {name + file_suffix}")
+
+    if args.test:
         # Run unit tests
         unittest.main(argv=[sys.argv[0]], exit=False)
-    else:
-        parser.print_help()
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()

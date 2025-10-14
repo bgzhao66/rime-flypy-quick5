@@ -4777,6 +4777,154 @@ def fix_xian2_pattern(text):
         text = re.sub(r'鹹(?=[之京以伏共唐喜宜寧已弼恆應昧欽池熙用秩稱第籍茫藎豐躓陽離騖平])', '咸', text)
     return text
 
+kNotZheWords = set("""
+劣迹昭著
+声誉卓著
+土著土偶
+信誉卓著
+仰屋著书
+以微知著
+笔名著作
+成效卓著
+臭名昭著
+睹微知著
+睹著知微
+恶迹昭著
+恩威并著
+鸿篇巨著
+皇皇巨著
+积微成著
+积微致著
+见微知著
+经典著作
+楔子著作
+彰明较著
+彰明昭著
+著名人物
+著书立说
+著作等身
+""".split())
+
+def fix_zhezhu_pattern(text):
+    if '著' in text:
+        found = False
+        for i in range(len(text) - 1):
+            for k in range(2, 10):
+                if i + k >= len(text):
+                    continue
+                if text[i:i+k] in kNotZheWords:
+                    found = True
+                    break
+        if found:
+            text = re.sub(r'zhe', 'zhu', text)
+    return text
+
+kZhaoWords = set("""
+一寻一个著
+一拿一个著
+一著不慎
+一著被蛇
+一鞭先著
+前不著村后不著店
+十捉九著
+四铺子著地
+寻找无著
+急惊风撞著慢郎中
+柳树上著
+柳树上著刀
+棋输先著
+棋错一著
+棋高一著
+歪打正著
+没著没落
+百下百著
+著三不著两
+著著失败
+瞎猫碰著死老鼠
+走为上著
+""".split())
+
+def fix_zhao_pattern(text):
+    if '著' in text:
+        found = False
+        for i in range(len(text) - 1):
+            for k in range(2, 10):
+                if i + k >= len(text):
+                    continue
+                if text[i:i+k] in kZhaoWords:
+                    found = True
+                    break
+        if found:
+            text = re.sub(r'zhe(?!n)', 'zhao', text)
+    return text
+
+kZhuoWords = set("""
+不自著罗衣
+东风齐著力
+个人依习惯身份而著的服装
+佛头著粪
+先人著鞭
+先我著鞭
+可著色的
+吃著不尽
+吃衣著饭
+固著底栖生物
+土地定著物
+头上著头
+好著丹青图画取
+密著拓扑
+密著空间
+寒梅著花未
+枝附叶著
+梵志翻著袜
+沉著痛快
+淡著燕脂匀注
+深切著明
+深切著白
+添盐著醋
+电解法防海生物污著系统
+画蛇著足
+著丝基因
+著人先鞭
+著我扁舟一叶
+著衣的玛哈
+知疼著热
+知疼著痒
+秋来未著花
+穿红著绿
+穿绸著缎
+粘著空间
+老树著花无丑枝
+脚著谢公屐
+装模著样
+谁复著手为摩挲
+近端著丝
+都护铁衣冷犹著
+都护铁衣冷难著
+醉里簪花倒著冠
+非单著丝
+非端著丝
+鞭辟著里
+高地人的执著
+魂不著体
+黏皮著骨
+当著不著
+""".split())
+
+def fix_zhuo_pattern(text):
+    if '著' in text:
+        found = False
+        for i in range(len(text) - 1):
+            for k in range(2, 10):
+                if i + k >= len(text):
+                    continue
+                if text[i:i+k] in kZhuoWords:
+                    found = True
+                    break
+        if found:
+            text = re.sub(r'zhe(?!n)', 'zhuo', text)
+    return text
+
 # Main processing
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -4793,7 +4941,10 @@ if __name__ == '__main__':
                 fix_changgan_pattern,
                 fix_ganzao_pattern,
                 fix_xian_pattern,
-                fix_xian2_pattern]
+                fix_xian2_pattern,
+                fix_zhezhu_pattern,
+                fix_zhao_pattern,
+                fix_zhuo_pattern]
 
     with open(args.input, 'rb') as fin, open(args.output, 'wb') as fout:
         for line in fin:

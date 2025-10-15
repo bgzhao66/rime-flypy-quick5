@@ -1,0 +1,3 @@
+[submodule "plugins/latex"]
+	path = plugins/latex
+	url = https://github.com/bgzhao66/rime_latex.git

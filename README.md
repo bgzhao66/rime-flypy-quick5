@@ -1,7 +1,7 @@
-# RIME flypy-quick5 -- 「双拼仓颉」输入法方案
+# RIME flypy-quick5-simp -- 「双拼仓颉」输入法方案
 
 ## 说明
-<code>flypy-quick5</code> 是一个基于双拼和仓颉的音形输入法方案，设计目标是让用户能够简单、快速、准确地统一输入各种文体的海量汉语字词，包括但不限于文言文、现代文、以及古诗词等等。
+<code>flypy-quick5-simp</code> 是一个基于双拼和仓颉的音形输入法方案，设计目标是让用户能够简单、快速、准确地统一输入各种文体的海量汉语字词，包括但不限于文言文、现代文、以及古诗词等等。
 - **双拼**：使用双拼方案作为字词的音码部分，采用**小鹤双拼**方案，每字两码。
 - **仓颉**：利用仓颉**五代**速成码的**逆序首尾**，作为区分码，每字词两码。
 
@@ -43,8 +43,8 @@ default.custom.yaml 文件为用户重要配置文件，其中schema_list字段�
 
 ### 输入法码表
 ```
-flypy_quick5.schema.yaml
-flypy_quick5*.dict.yaml
+flypy_quick5_simp.schema.yaml
+flypy_quick5_simp*.dict.yaml
 ```
 
 ### 通用方式

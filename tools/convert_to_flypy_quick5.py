@@ -493,7 +493,7 @@ def get_pinyin_seq_for_words(words):
     return pinyin_seq_dict
 
 # Get a list of words from an input file, one word per line.
-def get_words_from_file(file, words = dict(), min_length=2, max_length=20):
+def get_words_from_file(file, words = dict(), min_length=2, max_length=7):
     lineno = 0
     with open(file, 'r') as f:
         for line in f:
@@ -628,10 +628,12 @@ def sort_by_length_and_code(word_codes):
 # word_codes: {"legth": {"code": {"word": frequency}}}
 # outfile: the output file, default is sys.stdout, in the following format:
 # word<tab>code<tab>frequency
-def print_word_codes(word_codes, outfile=sys.stdout, freq_base=0):
+def print_word_codes(word_codes, outfile=sys.stdout, freq_base=0, max_length=7):
     for length in get_sorted_keys(word_codes):
         for code in get_sorted_keys(word_codes[length]):
             for word in get_sorted_keys(word_codes[length][code]):
+                if len(word) > max_length:
+                    continue
                 freq = word_codes[length][code][word]
                 print("%s\t%s\t%i" % (word, code, freq[0]+freq_base), file=outfile)
 
@@ -1096,7 +1098,7 @@ def main():
         augmented_extra_dict = augment_common_words(sorted_extra_dict, [augmented_phrases, *abbreviated_dicts, *abbreviated_extra_dicts], preemptive=False)
 
         # Split extra words into parts
-        boundaries = [3, 7, max(augmented_extra_dict.keys())]
+        boundaries = [3, max(augmented_extra_dict.keys())]
         length = 0
         extra_tables = []
         for i in range(len(boundaries)):

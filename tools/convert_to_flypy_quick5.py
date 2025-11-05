@@ -778,8 +778,7 @@ def get_abbreviated_dict_for(toneless_phrases, characters, used_codes = set(), m
                      ({2: toneless_phrases[2]}, [5]), # two-character phrases, 5-letter codes
                      ({3: toneless_phrases[3]}, [5]), # three-character phrases, 5-letter codes
                      ({3: toneless_phrases[3]}, [6]), # three-character phrases, 6-letter codes
-                     ({3: toneless_phrases[3]}, [7]), # three-character phrases, 7-letter codes
-                     ({4: toneless_phrases[4]}, [7])] # four-character phrases, 7-letter codes
+                     ({3: toneless_phrases[3]}, [7])] # three-character phrases, 7-letter codes
 
     abbreviated_dicts = []
     for phrases_dict, code_sizes in phrase_levels:

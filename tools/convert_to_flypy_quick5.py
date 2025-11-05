@@ -554,15 +554,11 @@ encoder:
     - length_equal: 4
       formula: "AaAbBaBbCaCbDaDb"
     - length_equal: 5
-      formula: "AaAbBaBbCaCbDaDbEc"
+      formula: "AaAbBaBbCaCbDaDbEaEb"
     - length_equal: 6
-      formula: "AaAbBaBbCaCbDaDbFc"
+      formula: "AaAbBaBbCaCbDaDbEaEbFaFb"
     - length_equal: 7
-      formula: "AaAbBaBbCaCbDaDbGc"
-    - length_equal: 8
-      formula: "AaAbBaBbCaCbDaDbHaHbHc"
-    - length_equal: 9
-      formula: "AaAbBaBbCaCbDaDbHaHbIaIbIc"
+      formula: "AaAbBaBbCaCbDaDbEaEbFaFbGaGb"
 import_tables:"""
         for table in input_tables:
             hdr += f"\n  - {table}"

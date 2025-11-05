@@ -423,18 +423,9 @@ def get_initial_or_finals_cangjie5(word, mode):
 # Notations: flypys is a list of Flypys for the toneless Pinyin,
 #          cjcode is the Cangjie code for the last Chinese character in word.
 # Rules:
-# 1. Single characters: "".join(flypys) + cjcode[0] + cjcode[-1]
-# 2. Two characters: "".join(flypys) + cjcode[-1]
-# 3. Three or four characters: "".join(flypys[:4])
-# 4. Five or more characters:  "".join(flypys[:4]) + cjcode[-1]
+# 1. <= 3 characters: "".join(flypys) + cjcode[0] + cjcode[-1]
+# 3. >= 4 characters: "".join(flypys)
 # 5. If the word is not in the frequency dictionary, use a default frequency of
-
-def get_selected_pys(flypys):
-    selected_pys = flypys[0:4]
-    for i in range(4, len(flypys)):
-        if (i+1) % 5 in [3, 4]:
-            selected_pys.append(flypys[i])
-    return selected_pys
 
 # Returns a list of FlypyQuick5 sequences for the given word and Pinyin sequence.
 #  [("flypyquick5_seq1", freq1), ("flypyquick5_seq2", freq2), ...]
@@ -450,17 +441,14 @@ def get_flypyquick5_seq(word, pinyin_seq, get_frequency = get_frequency_default)
     except ValueError as e:
         raise ValueError(f"Error converting Pinyin to Shuangpin for word '{word}', '{pinyin_seq}'")
     freq = get_frequency(word, ' '.join(toneless_seq))
-    mode_mapping = {
-        1: 'last-first',
-        2: 'last-first',
-        3: 'last-first',
-        4: 'none',
-    }
+
+    # mode
     assert len(word) >= 1
-    mode = 'last'
-    if len(word) in mode_mapping:
-        mode = mode_mapping[len(word)]
-    pys = ''.join(get_selected_pys(flypys))
+    mode = 'none'
+    if len(word) <= 3:
+        mode = 'last-first'
+
+    pys = ''.join(flypys)
     flypyquick5_seq = [(''.join(code), freq) for code in get_descartes_products([[pys], get_initial_or_finals_cangjie5(word, mode)])]
     if len(flypyquick5_seq) == 0:
         raise ValueError(f"No valid FlypyQuick5 sequences generated for word '{word}'.")

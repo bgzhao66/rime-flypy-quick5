@@ -113,8 +113,8 @@ INITIALS = {
 }
 
 FINALS = {
-    "iu": "q", "ei": "w", "uan":"r", "van" : "r",  "ue": "t", "ve": "t",
-    "un": "y", "vn": "y", "uo": "o", "o": "o", "ie": "p",
+    "iu": "q", "ei": "w", "uan":"r", "van" : "r",  "ue": "t", "ve": "t", "üe": "t",
+    "un": "y", "vn": "y", "ün":"y", "uo": "o", "o": "o", "ie": "p",
 
     "a": "a", "ong": "s", "iong": "s", "ai": "d", "en":"f", "eng": "g",
     "ang": "h", "an": "j", "uai":"k", "ing":"k", "uang": "l", "iang": "l",
@@ -122,7 +122,7 @@ FINALS = {
     "ou": "z", "ua": "x", "ia": "x", "ao": "c", "ui": "v", "v":"v",
     "in": "b", "iao": "n", "ian": "m",
 
-    "a": "a", "e": "e", "i": "i", "u": "u",
+    "a": "a", "e": "e", "i": "i", "u": "u", "ü":"v"
 }
 
 
@@ -132,7 +132,8 @@ def pinyin_to_shuangpin(toneless: str):
     if not toneless:
         raise ValueError("Input Pinyin cannot be empty.")
     special_cases = {"a": "aa", "o": "oo", "e": "ee", "ang": "ah", "eng": "eg",
-                     "ng": "eg", "m": "mm", "n": "nn", "hng": "hg"}
+                     "ng": "eg", "m": "mm", "n": "nn", "hng": "hg",
+                     "lü": "lv", "nü": "nv"}
     if toneless in special_cases:
         return special_cases[toneless]
 

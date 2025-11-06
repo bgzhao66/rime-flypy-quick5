@@ -5,6 +5,13 @@ local function filter_func(input, env)
   local ctx = env.engine.context
   local user_input = ctx.input
 
+  if string.sub(user_input, 1, 1) == "\\" then
+    for cand in input:iter() do
+      yield(cand)  -- pass through unmodified (keep preedit)
+    end
+    return
+  end
+
   for cand in input:iter() do
     local N = utf8.len(cand.text) or 1
     local total_len = #user_input

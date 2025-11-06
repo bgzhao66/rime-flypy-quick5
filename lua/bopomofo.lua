@@ -874,6 +874,17 @@ local function shuangpin_to_pinyin(code)
   return code
 end
 
+function bopomofo.shuangpin_to_quanpin_full(code)
+  local res = ""
+  for i = 1, #code, 2 do
+    local syllable = code:sub(i, i+1)
+    local py = shuangpin_to_pinyin(syllable)
+    local sep = (#syllable == 2) and " " or ""
+    res = res .. py .. sep
+  end
+  return res
+end
+
 local function pinyin_to_zhuyin(pinyin)
   res = PINYIN_TO_ZHUYIN[pinyin]
   if res ~= nil then

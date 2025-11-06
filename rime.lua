@@ -58,7 +58,7 @@ librime-lua 样例
 
 -- II. filters
 
-show_bopomofo_cangjie = require("show_bopomofo_cangjie")
+show_bopomofo = require("show_bopomofo")
 
 show_quanpin = require("show_quanpin")
 

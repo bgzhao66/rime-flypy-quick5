@@ -53,7 +53,7 @@ engine:
   filters:
     - simplifier
     - uniquifier
-    #- single_char_filter
+    - lua_filter@show_quanpin
 
 speller:
   alphabet: zyxwvutsrqponmlkjihgfedcba

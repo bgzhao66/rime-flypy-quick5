@@ -20,8 +20,7 @@ local function filter_func(input, env)
     local cj_code = user_input:sub(2*N+1, total_len)
 
     local zhuyin = bopomofo.shuangpin_to_quanpin_full(py_code)
-    local cj = bopomofo.to_cangjie(cj_code)
-    cand.preedit = string.format("%s%s", zhuyin, cj)
+    cand.preedit = string.format("%s%s", zhuyin, cj_code)
 
     yield(cand)
   end

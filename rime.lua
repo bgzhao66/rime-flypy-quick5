@@ -60,5 +60,5 @@ librime-lua 样例
 
 show_bopomofo_cangjie = require("show_bopomofo_cangjie")
 
-show_quanpin_cangjie = require("show_quanpin_cangjie")
+show_quanpin = require("show_quanpin")
 

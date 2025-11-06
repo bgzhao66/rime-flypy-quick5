@@ -14,6 +14,9 @@ all:
 
 	echo "All tables converted"
 
+mapping:
+	python3 ./mapping_bopomofo.py > mapping.txt
+
 .PHONY: clean
 clean:
 	rm -f ../$(PRIMARY_NAME)*.dict.yaml

@@ -6,8 +6,10 @@ PRIMARY_NAME = flypy_quick5_simp
 all:
 	python3 ./convert_to_flypy_quick5.py --name $(PRIMARY_NAME) --chinese_code  --phrase --abbreviate \
 				--extra_table --difference      \
-				extra/essay.txt
-#				extra/360wdict.txt    \
+				extra/essay.txt					\
+				extra/360wdict-0.txt
+#				extra/360wdict-1.txt
+#				extra/360wdict-2.txt
 #				extra/words.txt
 
 	echo "All tables converted"
